@@ -14,6 +14,7 @@ namespace BlinkChatBackend.Services
         private readonly MultiTurnConversation _chat;
         public AIService(IConfiguration configuration)
         {
+            Console.Writeline(configuration["LM.lincensekey"]);
             LMKit.Licensing.LicenseManager.SetLicenseKey(configuration["LM.lincensekey"]);
 
             var modelLink = ModelCard.GetPredefinedModelCardByModelID("qwen2-vl:2b").ModelUri.ToString();

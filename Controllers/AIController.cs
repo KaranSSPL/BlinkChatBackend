@@ -31,7 +31,7 @@ namespace BlinkChatBackend.Controllers
             }
 
             try
-            {
+            {   
                 Response.ContentType = "text/plain";
                 Response.Headers.Add("Transfer-Encoding", "chunked");
 

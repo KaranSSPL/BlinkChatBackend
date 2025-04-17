@@ -12,9 +12,9 @@ namespace BlinkChatBackend.Services
         static bool _isDownloading;
         private readonly LM _model;
         private readonly MultiTurnConversation _chat;
-        public AIService()
+        public AIService(IConfiguration configuration)
         {
-            LMKit.Licensing.LicenseManager.SetLicenseKey("");
+            LMKit.Licensing.LicenseManager.SetLicenseKey(configuration["LM.lincensekey"]);
 
             var modelLink = ModelCard.GetPredefinedModelCardByModelID("qwen2-vl:2b").ModelUri.ToString();
             var modelUri = new Uri(modelLink);
@@ -39,6 +39,7 @@ namespace BlinkChatBackend.Services
                     return;
                 var buffer = Encoding.UTF8.GetBytes(token.TextChunk);
                 await responseStream.WriteAsync(buffer, 0, buffer.Length);
+                Console.WriteLine(token.TextChunk);
                 await responseStream.FlushAsync();
             };
             await _chat.SubmitAsync(new Prompt(prompt.Question), new CancellationTokenSource(TimeSpan.FromMinutes(2)).Token);

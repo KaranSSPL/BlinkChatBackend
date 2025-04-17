@@ -1,0 +1,41 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "ImageRecognition",
+    "version": "1.0"
+  },
+  "paths": {
+    "/AI": {
+      "get": {
+        "tags": [
+          "AI"
+        ],
+        "operationId": "AnalyzeImage",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "D:\\Wallpaper\\2897878.jpg"
+            }
+          },
+          {
+            "name": "prompt",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "describe the image"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": { }
+}

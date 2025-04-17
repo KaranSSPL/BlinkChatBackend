@@ -31,9 +31,8 @@ namespace BlinkChatBackend.Controllers
             }
 
             try
-            {   
-                Response.ContentType = "text/plain";
-                Response.Headers.Add("Transfer-Encoding", "chunked");
+            {
+                Response.ContentType = "text/event-stream; charset=utf-8";
 
                 await _aIService.GetResponse(prompt, Response.Body);
             }

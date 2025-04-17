@@ -40,7 +40,6 @@ namespace BlinkChatBackend.Services
                     return;
                 var buffer = Encoding.UTF8.GetBytes(token.TextChunk);
                 await responseStream.WriteAsync(buffer, 0, buffer.Length);
-                Console.WriteLine(token.TextChunk);
                 await responseStream.FlushAsync();
             };
             await _chat.SubmitAsync(new Prompt(prompt.Question), new CancellationTokenSource(TimeSpan.FromMinutes(2)).Token);

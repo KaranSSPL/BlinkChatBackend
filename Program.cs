@@ -1,42 +1,51 @@
 using BlinkChatBackend.Services;
 
-var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-
-builder.Services.AddSwaggerGen();
-
-builder.Services.AddScoped<IAIService, AIService>();
-
-builder.Services.AddCors(options =>
+try
 {
-    options.AddPolicy("AllowAll",
-        builder =>
-        {
-            builder.AllowAnyOrigin()
-                   .AllowAnyMethod()
-                   .AllowAnyHeader();
-        });
-});
-var app = builder.Build();
+    Console.WriteLine("Application starting...");
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-}
+    var corsPolicy = "AllowAll";
+
+    var builder = WebApplication.CreateBuilder(args);
+
+    builder.Services.AddControllers();
+
+    builder.Services.AddEndpointsApiExplorer();
+
+    builder.Services.AddSwaggerGen();
+
+    builder.Services.AddScoped<IAIService, AIService>();
+
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy(corsPolicy,
+            builder =>
+            {
+                builder.AllowAnyOrigin()
+                       .AllowAnyMethod()
+                       .AllowAnyHeader();
+            });
+    });
+
+    var app = builder.Build();
+
     app.UseSwagger();
     app.UseSwaggerUI();
 
-app.UseCors("AllowAll");
+    app.UseCors(corsPolicy);
 
-app.UseRouting();
+    app.UseRouting();
 
-app.UseAuthorization();
+    app.UseAuthorization();
 
-app.MapControllers();
+    app.MapControllers();
 
-app.Run();
+    app.Run();
+}
+catch (Exception ex)
+{
+    Console.WriteLine("Error message: " + "\n" + ex.InnerException?.Message ?? ex.Message);
+    Console.WriteLine("Stack trace: " + "\n" + ex.StackTrace);
+    Console.WriteLine("");
+    Console.WriteLine("Application start-up failed. Closing... ");
+}

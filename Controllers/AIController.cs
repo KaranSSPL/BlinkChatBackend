@@ -1,48 +1,35 @@
 using BlinkChatBackend.Models;
 using BlinkChatBackend.Services;
-using LMKit.Model;
-using LMKit.TextGeneration.Sampling;
-using LMKit.TextGeneration;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Text;
-using LMKit.TextGeneration.Chat;
 
-namespace BlinkChatBackend.Controllers
+namespace BlinkChatBackend.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class AIController(IAIService aIService) : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class AIController : ControllerBase
+    [HttpPost("chat")]
+    public async Task GetResponse(AIPrompt prompt)
     {
-        private readonly IAIService _aIService;
-        public AIController(IAIService aIService)
+        if (prompt == null)
         {
-            _aIService = aIService;
+            Response.StatusCode = StatusCodes.Status400BadRequest;
+            await Response.WriteAsync("Prompt cannot be null.");
+            return;
         }
 
-        [HttpPost("get-response")]
-        public async Task GetResponse(AIPrompt prompt)
+        try
         {
-            if (prompt == null)
-            {
-                Response.StatusCode = StatusCodes.Status400BadRequest;
-                await Response.WriteAsync("Prompt cannot be null.");
-                return;
-            }
+            Response.ContentType = "text/event-stream; charset=utf-8";
 
-            try
+            await aIService.GetChatResponse(prompt, Response.Body);
+        }
+        catch (Exception)
+        {
+            if (!Response.HasStarted)
             {
-                Response.ContentType = "text/event-stream; charset=utf-8";
-
-                await _aIService.GetResponse(prompt, Response.Body);
-            }
-            catch (Exception)
-            {
-                if (!Response.HasStarted)
-                {
-                    Response.StatusCode = StatusCodes.Status500InternalServerError;
-                    await Response.WriteAsync("An error occurred while processing the request.");
-                }
+                Response.StatusCode = StatusCodes.Status500InternalServerError;
+                await Response.WriteAsync("An error occurred while processing the request.");
             }
         }
     }

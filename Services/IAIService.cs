@@ -1,9 +1,8 @@
 ﻿using BlinkChatBackend.Models;
 
-namespace BlinkChatBackend.Services
+namespace BlinkChatBackend.Services;
+
+public interface IAIService
 {
-    public interface IAIService
-    {
-        Task GetResponse(AIPrompt prompt,Stream responseStream);
-    }
+    Task GetChatResponse(AIPrompt prompt, Stream responseStream);
 }

@@ -1,4 +1,5 @@
 using BlinkChatBackend.Services;
+using LMKit.Model;
 
 try
 {
@@ -13,6 +14,13 @@ try
     builder.Services.AddEndpointsApiExplorer();
 
     builder.Services.AddSwaggerGen();
+
+    builder.Services.AddSingleton(sp =>
+    {
+        LMKit.Licensing.LicenseManager.SetLicenseKey(builder.Configuration["LM:licensekey"]);
+        var modelUri = new Uri(ModelCard.GetPredefinedModelCardByModelID("qwen2-vl:2b").ModelUri.ToString());
+        return new LM(modelUri);
+    });
 
     builder.Services.AddScoped<IAIService, AIService>();
 

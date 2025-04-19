@@ -2,6 +2,6 @@
 {
     public class AIPrompt
     {
-        public string Question { get; set; } = string.Empty;
+        public string Query { get; set; } = string.Empty;
     }
 }

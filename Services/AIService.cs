@@ -9,66 +9,39 @@ namespace BlinkChatBackend.Services;
 
 public class AIService : IAIService
 {
-    static bool _isDownloading;
     readonly LM _model;
-    readonly MultiTurnConversation _chat;
-    public AIService(IConfiguration configuration)
+    static ChatHistory? _history;
+
+    public AIService(LM model)
     {
-        LMKit.Licensing.LicenseManager.SetLicenseKey(configuration["LM:licensekey"]);
+        _model = model;
+    }
 
-        var modelUri = new Uri(ModelCard.GetPredefinedModelCardByModelID("qwen2-vl:2b").ModelUri.ToString());
-        _model = new LM(modelUri, downloadingProgress: ModelDownloadingProgress, loadingProgress: ModelLoadingProgress);
-
-        _chat = new MultiTurnConversation(_model)
+    public async Task GetChatResponse(AIPrompt prompt, Stream responseStream)
+    {
+        using (var chat = new MultiTurnConversation(_model, _history ?? new ChatHistory(_model))
         {
             MaximumCompletionTokens = 1000,
             SamplingMode = new RandomSampling()
             {
                 Temperature = 0.8f
             },
-            SystemPrompt = "You are a chatbot that always responds promptly and helpfully to user requests. You only respond to questions that are related to .Net, C#, .Net ecosystem or any .net framework or .net versions. You politely reject any questions that are not related to .Net"
-        };
-    }
-
-    public async Task GetChatResponse(AIPrompt prompt, Stream responseStream)
-    {
-        _chat.AfterTokenSampling += async (sender, token) =>
+            SystemPrompt = "You are a chatbot that always responds promptly and helpfully to user requests. You only respond to questions that are related to .Net, C#, .Net ecosystem or any .net framework or .net versions. You will politely reject any questions that are not related to .Net"
+        })
         {
-            if (token.TextChunk == "<|im_end|>")
-                return;
-            var buffer = Encoding.UTF8.GetBytes(token.TextChunk);
-            await responseStream.WriteAsync(buffer);
-            await responseStream.FlushAsync();
-        };
-        await _chat.SubmitAsync(new Prompt(prompt.Question), new CancellationTokenSource(TimeSpan.FromMinutes(2)).Token);
-    }
+            chat.AfterTokenSampling += async (sender, token) =>
+            {
+                if (token.TextChunk == "<|im_end|>")
+                {
+                    _history = chat.ChatHistory;
+                    return;
+                }
+                var buffer = Encoding.UTF8.GetBytes(token.TextChunk);
+                await responseStream.WriteAsync(buffer);
+                await responseStream.FlushAsync();
+            };
 
-    static bool ModelDownloadingProgress(string path, long? contentLength, long bytesRead)
-    {
-        _isDownloading = true;
-        if (contentLength.HasValue)
-        {
-            double progressPercentage = Math.Round((double)bytesRead / contentLength.Value * 100, 2);
-            Console.Write($"\rDownloading model {progressPercentage:0.00}%");
+            await chat.SubmitAsync(new Prompt(prompt.Query), new CancellationTokenSource(TimeSpan.FromMinutes(2)).Token);
         }
-        else
-        {
-            Console.Write($"\rDownloading model {bytesRead} bytes");
-        }
-
-        return true;
-    }
-
-    static bool ModelLoadingProgress(float progress)
-    {
-        if (_isDownloading)
-        {
-            Console.Clear();
-            _isDownloading = false;
-        }
-
-        Console.Write($"\rLoading model {Math.Round(progress * 100)}%");
-
-        return true;
     }
 }

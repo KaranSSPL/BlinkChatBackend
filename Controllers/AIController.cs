@@ -11,10 +11,10 @@ public class AIController(IAIService aIService) : ControllerBase
     [HttpPost("chat")]
     public async Task GetResponse(AIPrompt prompt)
     {
-        if (prompt == null)
+        if (prompt == null || prompt.Query == "")
         {
             Response.StatusCode = StatusCodes.Status400BadRequest;
-            await Response.WriteAsync("Prompt cannot be null.");
+            await Response.WriteAsync("Invalid paramters.");
             return;
         }
 
@@ -24,12 +24,12 @@ public class AIController(IAIService aIService) : ControllerBase
 
             await aIService.GetChatResponse(prompt, Response.Body);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             if (!Response.HasStarted)
             {
                 Response.StatusCode = StatusCodes.Status500InternalServerError;
-                await Response.WriteAsync("An error occurred while processing the request.");
+                await Response.WriteAsync(ex.Message);
             }
         }
     }

@@ -9,11 +9,19 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
-    builder.Services.AddControllers();
+    builder.Services.AddControllers().AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow;
+    });
 
     builder.Services.AddEndpointsApiExplorer();
 
     builder.Services.AddSwaggerGen();
+
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = builder.Configuration.GetConnectionString("Redis");
+    });
 
     builder.Services.AddSingleton(sp =>
     {

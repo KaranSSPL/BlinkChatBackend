@@ -11,7 +11,7 @@ public class AIController(IAIService aIService) : ControllerBase
     [HttpPost("chat")]
     public async Task GetResponse(AIPrompt prompt)
     {
-        if (prompt == null || prompt.Query == "")
+        if (prompt == null)
         {
             Response.StatusCode = StatusCodes.Status400BadRequest;
             await Response.WriteAsync("Invalid paramters.");

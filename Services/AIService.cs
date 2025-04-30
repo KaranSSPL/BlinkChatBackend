@@ -180,6 +180,60 @@ public class AIService : IAIService
             }
         }
     }
+
+    public async Task GetRAGResponseVectorFromDocker(string prompt, Stream responseStream)
+    {
+        using (LM _embeddingModel = new LM("https://huggingface.co/lm-kit/bge-1.5-gguf/resolve/main/bge-small-en-v1.5-f16.gguf?download=true"))
+        {
+            var _qdrantstore = new DummyQdrantStore(new Uri("http://localhost:6334"));
+
+            _ragEngine = new RagEngine(_embeddingModel, _qdrantstore);
+            await _qdrantstore.DeleteCollectionAsync(COLLECTION_NAME);
+            if (await _qdrantstore.CollectionExistsAsync(COLLECTION_NAME))
+            {
+                _dataSource = DataSource.LoadFromStore(_qdrantstore, COLLECTION_NAME, _embeddingModel);
+            }
+            else
+            {
+                string path = Path.Combine(_webHostEnvironment.ContentRootPath, "wwwroot", COLLECTION_NAME, "Intro.txt");
+                string eBookContent = File.ReadAllText(path);
+                _dataSource = _ragEngine.ImportText(eBookContent, new TextChunking() { MaxChunkSize = 500 }, COLLECTION_NAME, "default");
+            }
+
+            _ragEngine.AddDataSource(_dataSource);
+
+            var chat = new SingleTurnConversation(_model)
+            {
+                SamplingMode = new GreedyDecoding(),
+                SystemPrompt = "You are an expert RAG assistant,  that only answers questions using the provided context. If the answer cannot be found in the context, respond with: 'I don’t know.' Do not use outside knowledge or make assumptions."
+            };
+
+            chat.AfterTextCompletion += async (sender, token) =>
+            {
+                if (token.Text == "<|im_end|>")
+                    return;
+                var buffer = Encoding.UTF8.GetBytes(token.Text);
+                await responseStream.WriteAsync(buffer);
+                await responseStream.FlushAsync();
+            };
+
+            // Determine the number of top partitions to select based on GPU support.
+            // If GPU is available, select the top 3 partitions; otherwise, select only the top 1 to maintain acceptable speed.
+            int topK = Runtime.HasGpuSupport ? 3 : 1;
+            List<TextPartitionSimilarity> partitions = _ragEngine.FindMatchingPartitions(prompt, topK, forceUniqueSection: true);
+
+            if (partitions.Count > 0)
+            {
+                _ = _ragEngine.QueryPartitions(prompt, partitions, chat);
+            }
+            else
+            {
+                var buffer = Encoding.UTF8.GetBytes("No relevant information found in the loaded sources to answer your query. Please try asking a different question.");
+                await responseStream.WriteAsync(buffer);
+                await responseStream.FlushAsync();
+            }
+        }
+    }
     #endregion
 
     #region [Private Methods]

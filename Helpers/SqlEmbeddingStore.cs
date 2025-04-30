@@ -2,11 +2,8 @@
 using Google.Protobuf;
 using LMKit.Data;
 using LMKit.Data.Storage;
-using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Qdrant.Client.Grpc;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
 
 namespace BlinkChatBackend.Helpers
 {
@@ -69,7 +66,7 @@ namespace BlinkChatBackend.Helpers
             }
             cancellationToken.ThrowIfCancellationRequested();
             MetadataCollection metadata = new MetadataCollection();
-            
+
             var deserializedMeta= JsonConvert.DeserializeObject<PointStruct[]>(_context.embeddings.FirstOrDefault(x=>x.CollectionName==collectionIdentifier)?.Metadata);
             PointStruct readOnlyPoint = deserializedMeta.FirstOrDefault(x => x.Id.Uuid == id)?? null;
 
@@ -177,12 +174,12 @@ namespace BlinkChatBackend.Helpers
             {
                 if (point.Payload.Count == 0)
                     continue;
-                ScoredPoint scoredPoint = new ScoredPoint();
-                //if (System.Text.RegularExpressions.Match.Equals(vector, point.Vectors))
-                //{
-                //    if (getVector)
-                //        scoredPoint.Vectors.Add(point.Vectors);
-                //}
+                ScoredPoint scoredPoint = new ScoredPoint() { Id=point.Id};
+                if (System.Text.RegularExpressions.Match.Equals(vector, point.Vectors))
+                {
+                    if (getVector)
+                        scoredPoint.Vectors.MergeFrom(point.Vectors.ToByteArray());
+                }
 
                 scoredPoints.Add(scoredPoint);
             }
@@ -324,13 +321,10 @@ namespace BlinkChatBackend.Helpers
             }
             throw new ArgumentException("The provided id is neither a valid unsigned long nor a GUID.", "id");
         }
-        private static string PointIdToString(PointId id)
+        private string PointIdToString(PointId id)
         {
-            if (!id.HasUuid)
-            {
-                return id.Num.ToString();
-            }
             return id.Uuid.ToString();
         }
+        
     }
 }

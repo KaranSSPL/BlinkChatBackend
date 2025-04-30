@@ -18,13 +18,14 @@ namespace BlinkChatBackend.Helpers
         {
             _context = context;
         }
-        public Task<bool> CollectionExistsAsync(string collectionIdentifier, CancellationToken cancellationToken = default)
+        public async Task<bool> CollectionExistsAsync(string collectionIdentifier, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(collectionIdentifier))
             {
                 throw new ArgumentException("Collection identifier cannot be null or empty.", "collectionIdentifier");
             }
-            return Task.Run(()=>_context.embeddings.FirstOrDefault(x => x.CollectionName == collectionIdentifier)!=null);
+            var embedding=_context.embeddings.FirstOrDefault(x => x.CollectionName == collectionIdentifier);
+            return embedding!=null;
         }
 
         public async Task CreateCollectionAsync(string collectionIdentifier, uint vectorSize, CancellationToken cancellationToken = default)
@@ -70,7 +71,7 @@ namespace BlinkChatBackend.Helpers
             MetadataCollection metadata = new MetadataCollection();
             
             var deserializedMeta= JsonConvert.DeserializeObject<PointStruct[]>(_context.embeddings.FirstOrDefault(x=>x.CollectionName==collectionIdentifier)?.Metadata);
-            PointStruct readOnlyPoint = deserializedMeta.FirstOrDefault(x => x.Id == ParsePointId(id))?? null;
+            PointStruct readOnlyPoint = deserializedMeta.FirstOrDefault(x => x.Id.Uuid == id)?? null;
 
             if (readOnlyPoint == null)
             {
@@ -112,7 +113,10 @@ namespace BlinkChatBackend.Helpers
             {
                 if (point.Payload.Count == 0)
                     continue;
-                var scoredPoint=new ScoredPoint();
+                var scoredPoint=new ScoredPoint()
+                {
+                    Id=point.Id,
+                };
                 var metadata2 = new MetadataCollection();
                 point.Payload.ToList().ForEach(x => metadata2.Add(PayloadEntryToMetadata(x)));
                 if(System.Text.RegularExpressions.Match.Equals(metadata, metadata2))
@@ -264,7 +268,7 @@ namespace BlinkChatBackend.Helpers
             cancellationToken.ThrowIfCancellationRequested();
             PointStruct pointStruct = new PointStruct
             {
-                Id = new PointId(uint.Parse(id)),
+                Id = new PointId(Guid.Parse(id)),
                 Vectors = vectors
             };
             foreach (Metadata metadatum in metadata)
@@ -274,12 +278,12 @@ namespace BlinkChatBackend.Helpers
 
             CancellationToken cancellationToken2 = cancellationToken;
             PointStruct[] points = new PointStruct[1] { pointStruct };
-            var embedding= new Embedding
-            {
-                Id = uint.Parse(id),
-                Metadata = JsonConvert.SerializeObject(points)
-            };
-            await _context.embeddings.AddAsync(embedding,cancellationToken);
+            
+            var embedding = _context.embeddings.FirstOrDefault(x => x.CollectionName == collectionIdentifier);
+            embedding.Metadata = JsonConvert.SerializeObject(points);
+            
+            _context.embeddings.Update(embedding);
+
             await _context.SaveChangesAsync();
         }
 
@@ -314,9 +318,9 @@ namespace BlinkChatBackend.Helpers
         }
         private PointId ParsePointId(string id)
         {
-            if (ulong.TryParse(id, out var result))
+            if (Guid.TryParse(id, out var result2))
             {
-                return new PointId(result);
+                return new PointId(result2);
             }
             throw new ArgumentException("The provided id is neither a valid unsigned long nor a GUID.", "id");
         }

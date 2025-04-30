@@ -7,8 +7,8 @@ namespace BlinkChatBackend.Models
     public class Embedding
     {
         [Key]
-        public uint Id { get; set; }
-        public string Metadata { get; set; }
+        public Guid Id { get; set; }
+        public string? Metadata { get; set; }
         
         public string CollectionName { get; set; }
     }

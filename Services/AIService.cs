@@ -26,7 +26,6 @@ public class AIService : IAIService
     public IDistributedCache _distributedCache;
     private readonly IWebHostEnvironment _webHostEnvironment;
     private readonly BlinkChatContext _context;
-
     public AIService(LM model, IDistributedCache distributedCache, IWebHostEnvironment webHostEnvironment,BlinkChatContext context)
     {
         _model = model;
@@ -131,25 +130,14 @@ public class AIService : IAIService
 
     public async Task GetRAGResponseVector(string prompt, Stream responseStream)
     {
-        var v=_context.embeddings.ToList();
         using (LM _embeddingModel = new LM("https://huggingface.co/lm-kit/bge-1.5-gguf/resolve/main/bge-small-en-v1.5-f16.gguf?download=true"))
         {
-
-            IVectorStore _store = new SqlEmbeddingStore(_context);
+            var _store = new SqlEmbeddingStore(_context);
 
             _ragEngine = new RagEngine(_embeddingModel,_store);
-
-            try
-            {
-                await _store.CollectionExistsAsync(COLLECTION_NAME);
-            }
-            catch (Exception)
-            {
-                throw;
-            }
             if (await _store.CollectionExistsAsync(COLLECTION_NAME))
             {
-                _dataSource=DataSource.LoadFromStore(_store, COLLECTION_NAME, _embeddingModel);
+                _dataSource = DataSource.LoadFromStore(_store, COLLECTION_NAME, _embeddingModel);
             }
             else
             {

@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -14,9 +15,8 @@ namespace BlinkChatBackend.Migrations
                 name: "embeddings",
                 columns: table => new
                 {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Metadata = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Metadata = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CollectionName = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>

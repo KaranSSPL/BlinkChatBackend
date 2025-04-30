@@ -11,7 +11,7 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
-    builder.Services.AddDbContext<BlinkChatContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("BlinkChatConn")));
+    builder.Services.AddDbContext<BlinkChatContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("BlinkChatConn"),sqlOptions=>sqlOptions.CommandTimeout(36000)));
 
     builder.Services.AddControllers().AddJsonOptions(options =>
     {

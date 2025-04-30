@@ -1,5 +1,7 @@
+using BlinkChatBackend.Models;
 using BlinkChatBackend.Services;
 using LMKit.Model;
+using Microsoft.EntityFrameworkCore;
 
 try
 {
@@ -8,6 +10,8 @@ try
     var corsPolicy = "AllowAll";
 
     var builder = WebApplication.CreateBuilder(args);
+
+    builder.Services.AddDbContext<BlinkChatContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("BlinkChatConn")));
 
     builder.Services.AddControllers().AddJsonOptions(options =>
     {
@@ -26,7 +30,8 @@ try
     builder.Services.AddSingleton(sp =>
     {
         LMKit.Licensing.LicenseManager.SetLicenseKey(builder.Configuration["LM:licensekey"]);
-        var modelUri = new Uri(ModelCard.GetPredefinedModelCardByModelID("qwen2-vl:2b").ModelUri.ToString());
+        //var modelUri = new Uri(ModelCard.GetPredefinedModelCardByModelID("qwen2-vl:2b").ModelUri.ToString());
+        var modelUri = new Uri("https://huggingface.co/Felladrin/gguf-Q5_K_M-NanoLM-1B-Instruct-v2/resolve/main/nanolm-1b-instruct-v2-q5_k_m-imat.gguf?download=true");
         return new LM(modelUri);
     });
 

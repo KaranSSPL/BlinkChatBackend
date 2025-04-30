@@ -33,4 +33,29 @@ public class AIController(IAIService aIService) : ControllerBase
             }
         }
     }
+
+    [HttpPost("chat-rag-response")]
+    public async Task GetRAGResponse(string prompt)
+    {
+        if (prompt == null || prompt == "")
+        {
+            Response.StatusCode = StatusCodes.Status400BadRequest;
+            await Response.WriteAsync("Invalid paramters.");
+            return;
+        }
+
+        try
+        {
+            Response.ContentType = "text/event-stream; charset=utf-8";
+            aIService.GetRAGResponseVector(prompt, Response.Body);
+        }
+        catch (Exception ex)
+        {
+            if (!Response.HasStarted)
+            {
+                Response.StatusCode = StatusCodes.Status500InternalServerError;
+                await Response.WriteAsync(ex.Message);
+            }
+        }
+    }
 }

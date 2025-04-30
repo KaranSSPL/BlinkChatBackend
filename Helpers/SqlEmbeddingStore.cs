@@ -105,9 +105,10 @@ namespace BlinkChatBackend.Helpers
             {
                 return new List<PointEntry>(); 
             }
+            var deserializedMeta = JsonConvert.DeserializeObject<PointStruct[]>(embedding.Metadata);
 
             List<ScoredPoint> scoredPoints = new List<ScoredPoint>();
-            foreach ( var point in embedding.Metadata)
+            foreach ( var point in deserializedMeta)
             {
                 if (point.Payload.Count == 0)
                     continue;
@@ -165,9 +166,10 @@ namespace BlinkChatBackend.Helpers
             {
                 return new List<(PointEntry, float)>();
             }
+            var deserializedMeta = JsonConvert.DeserializeObject<PointStruct[]>(embedding.Metadata);
 
             List<ScoredPoint> scoredPoints = new List<ScoredPoint>();
-            foreach (var point in embedding.Metadata)
+            foreach (var point in deserializedMeta)
             {
                 if (point.Payload.Count == 0)
                     continue;
@@ -227,11 +229,12 @@ namespace BlinkChatBackend.Helpers
             }
 
             Embedding embedding = _context.embeddings.FirstOrDefault(x => x.CollectionName == collectionIdentifier);
+            var deserializedMeta = JsonConvert.DeserializeObject<PointStruct[]>(embedding?.Metadata);
             if (clearFirst)
             {
-                embedding?.Metadata.FirstOrDefault(x=>x.Id==ParsePointId(id))?.Payload.Clear();
+                deserializedMeta.FirstOrDefault(x=>x.Id==ParsePointId(id))?.Payload.Clear();
             }
-            embedding?.Metadata.FirstOrDefault(x => x.Id == ParsePointId(id))?.Payload.Add(payload);
+            deserializedMeta.FirstOrDefault(x => x.Id == ParsePointId(id))?.Payload.Add(payload);
             _context.embeddings.Update(embedding);
             await _context.SaveChangesAsync(cancellationToken);
         }
@@ -274,7 +277,7 @@ namespace BlinkChatBackend.Helpers
             var embedding= new Embedding
             {
                 Id = uint.Parse(id),
-                Metadata = points
+                Metadata = JsonConvert.SerializeObject(points)
             };
             await _context.embeddings.AddAsync(embedding,cancellationToken);
             await _context.SaveChangesAsync();

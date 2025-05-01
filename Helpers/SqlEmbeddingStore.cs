@@ -1,8 +1,10 @@
 ﻿using BlinkChatBackend.Models;
 using Google.Protobuf;
+using Google.Protobuf.Collections;
 using LMKit.Data;
 using LMKit.Data.Storage;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Qdrant.Client.Grpc;
 
 namespace BlinkChatBackend.Helpers
@@ -67,8 +69,9 @@ namespace BlinkChatBackend.Helpers
             cancellationToken.ThrowIfCancellationRequested();
             MetadataCollection metadata = new MetadataCollection();
 
-            var deserializedMeta= JsonConvert.DeserializeObject<PointStruct[]>(_context.embeddings.FirstOrDefault(x=>x.CollectionName==collectionIdentifier)?.Metadata);
-            PointStruct readOnlyPoint = deserializedMeta.FirstOrDefault(x => x.Id.Uuid == id)?? null;
+            var deserializedMeta = MapPointStruct(_context.embeddings.FirstOrDefault(x => x.CollectionName == collectionIdentifier)?.Metadata??"");
+            
+            PointStruct readOnlyPoint = deserializedMeta.FirstOrDefault(x => x.Id.Uuid == id)!;
 
             if (readOnlyPoint == null)
             {
@@ -103,7 +106,7 @@ namespace BlinkChatBackend.Helpers
             {
                 return new List<PointEntry>(); 
             }
-            var deserializedMeta = JsonConvert.DeserializeObject<PointStruct[]>(embedding.Metadata);
+            var deserializedMeta = MapPointStruct(_context.embeddings.FirstOrDefault(x => x.CollectionName == collectionIdentifier)?.Metadata ?? "");
 
             List<ScoredPoint> scoredPoints = new List<ScoredPoint>();
             foreach ( var point in deserializedMeta)
@@ -118,7 +121,9 @@ namespace BlinkChatBackend.Helpers
                 point.Payload.ToList().ForEach(x => metadata2.Add(PayloadEntryToMetadata(x)));
                 if(System.Text.RegularExpressions.Match.Equals(metadata, metadata2))
                 {
-                    if(getMetadata)
+                    if (getVector)
+                        scoredPoint.Vectors.MergeFrom(point.Vectors.ToByteArray());
+                    if (getMetadata)
                         scoredPoint.Payload.Add(point.Payload);
                 }
                 
@@ -166,22 +171,25 @@ namespace BlinkChatBackend.Helpers
             if (embedding == null)
             {
                 return new List<(PointEntry, float)>();
-            }
-            var deserializedMeta = JsonConvert.DeserializeObject<PointStruct[]>(embedding.Metadata);
+            }   
+            var deserializedMeta = MapPointStruct(_context.embeddings.FirstOrDefault(x => x.CollectionName == collectionIdentifier)?.Metadata ?? "");
 
             List<ScoredPoint> scoredPoints = new List<ScoredPoint>();
             foreach (var point in deserializedMeta)
             {
                 if (point.Payload.Count == 0)
                     continue;
-                ScoredPoint scoredPoint = new ScoredPoint() { Id=point.Id};
-                if (System.Text.RegularExpressions.Match.Equals(vector, point.Vectors))
+                
+                if (Match.Equals(vector, point.Vectors.Vector.Data.ToArray()))
                 {
+                    ScoredPoint scoredPoint = new ScoredPoint() { Id=point.Id};
                     if (getVector)
                         scoredPoint.Vectors.MergeFrom(point.Vectors.ToByteArray());
+                    if(getMetadata)
+                        scoredPoint.Payload.Add(point.Payload);
+                    scoredPoints.Add(scoredPoint);
                 }
 
-                scoredPoints.Add(scoredPoint);
             }
 
             List<(PointEntry, float)> list = new List<(PointEntry, float)>(scoredPoints.Count);
@@ -230,12 +238,13 @@ namespace BlinkChatBackend.Helpers
             }
 
             Embedding embedding = _context.embeddings.FirstOrDefault(x => x.CollectionName == collectionIdentifier);
-            var deserializedMeta = JsonConvert.DeserializeObject<PointStruct[]>(embedding?.Metadata);
+            var deserializedMeta = MapPointStruct(_context.embeddings.FirstOrDefault(x => x.CollectionName == collectionIdentifier)?.Metadata ?? "");
             if (clearFirst)
             {
                 deserializedMeta.FirstOrDefault(x=>x.Id==ParsePointId(id))?.Payload.Clear();
             }
             deserializedMeta.FirstOrDefault(x => x.Id == ParsePointId(id))?.Payload.Add(payload);
+            embedding.Metadata =JsonConvert.SerializeObject(deserializedMeta);
             _context.embeddings.Update(embedding);
             await _context.SaveChangesAsync(cancellationToken);
         }
@@ -326,5 +335,50 @@ namespace BlinkChatBackend.Helpers
             return id.Uuid.ToString();
         }
         
+        private List<PointStruct> MapPointStruct(string JsonString)
+        {
+            var jArray = JArray.Parse(JsonString);
+            var points = new List<PointStruct>();
+            foreach (var item in jArray)
+            {
+                var point = new PointStruct();
+
+                if (item["Id"] is JToken idToken)
+                {
+                    point.Id = JsonConvert.DeserializeObject<PointId>(idToken.ToString());
+                }
+
+                if (item["Payload"] is JToken payloadToken)
+                {
+                    var payloadMap = new MapField<string, Value>();
+                    var payloadObj = JObject.Parse(payloadToken.ToString());
+
+                    foreach (var prop in payloadObj.Properties())
+                    {
+                        var tempValue = new Value
+                        {
+                            StringValue = prop.Value["StringValue"]?.ToString(),
+                        };
+
+                        payloadMap.Add(prop.Name, tempValue);
+                    }
+
+                    point.Payload.Add(payloadMap);
+                }
+
+                if (item["Vectors"] is JToken vectorsToken)
+                {
+                    var vectorObj = JObject.Parse(vectorsToken.ToString());
+                    if(vectorObj is not null)
+                    {
+                        var vectorArray=vectorObj.Properties().FirstOrDefault()?.Value["Data"]?.ToObject<float[]>() ?? Array.Empty<float>();
+                        point.Vectors = vectorArray;
+                    }
+                }
+
+                points.Add(point);
+            }
+            return points;
+        }
     }
 }

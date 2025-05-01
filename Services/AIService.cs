@@ -188,7 +188,6 @@ public class AIService : IAIService
             var _qdrantstore = new DummyQdrantStore(new Uri("http://localhost:6334"));
 
             _ragEngine = new RagEngine(_embeddingModel, _qdrantstore);
-            await _qdrantstore.DeleteCollectionAsync(COLLECTION_NAME);
             if (await _qdrantstore.CollectionExistsAsync(COLLECTION_NAME))
             {
                 _dataSource = DataSource.LoadFromStore(_qdrantstore, COLLECTION_NAME, _embeddingModel);
@@ -200,6 +199,7 @@ public class AIService : IAIService
                 _dataSource = _ragEngine.ImportText(eBookContent, new TextChunking() { MaxChunkSize = 500 }, COLLECTION_NAME, "default");
             }
 
+            _ragEngine.ClearDataSources();
             _ragEngine.AddDataSource(_dataSource);
 
             var chat = new SingleTurnConversation(_model)

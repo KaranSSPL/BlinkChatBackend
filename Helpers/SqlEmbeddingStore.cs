@@ -106,28 +106,28 @@ namespace BlinkChatBackend.Helpers
             {
                 return new List<PointEntry>(); 
             }
-            var deserializedMeta = MapPointStruct(_context.embeddings.FirstOrDefault(x => x.CollectionName == collectionIdentifier)?.Metadata ?? "");
+            var deserializedMeta = MapPointStruct(embedding?.Metadata ?? "");
 
             List<ScoredPoint> scoredPoints = new List<ScoredPoint>();
             foreach ( var point in deserializedMeta)
             {
                 if (point.Payload.Count == 0)
                     continue;
-                var scoredPoint=new ScoredPoint()
-                {
-                    Id=point.Id,
-                };
                 var metadata2 = new MetadataCollection();
                 point.Payload.ToList().ForEach(x => metadata2.Add(PayloadEntryToMetadata(x)));
-                if(System.Text.RegularExpressions.Match.Equals(metadata, metadata2))
+                if(Match.Equals(metadata, metadata2))
                 {
+                    var scoredPoint=new ScoredPoint()
+                    {
+                        Id=point.Id,
+                    };
                     if (getVector)
                         scoredPoint.Vectors.MergeFrom(point.Vectors.ToByteArray());
                     if (getMetadata)
                         scoredPoint.Payload.Add(point.Payload);
+                    scoredPoints.Add(scoredPoint);
                 }
                 
-                scoredPoints.Add(scoredPoint);
             }
 
             List<PointEntry> list = new List<PointEntry>(scoredPoints.Count);
@@ -172,7 +172,7 @@ namespace BlinkChatBackend.Helpers
             {
                 return new List<(PointEntry, float)>();
             }   
-            var deserializedMeta = MapPointStruct(_context.embeddings.FirstOrDefault(x => x.CollectionName == collectionIdentifier)?.Metadata ?? "");
+            var deserializedMeta = MapPointStruct(embedding?.Metadata ?? "");
 
             List<ScoredPoint> scoredPoints = new List<ScoredPoint>();
             foreach (var point in deserializedMeta)
@@ -238,15 +238,18 @@ namespace BlinkChatBackend.Helpers
             }
 
             Embedding embedding = _context.embeddings.FirstOrDefault(x => x.CollectionName == collectionIdentifier);
-            var deserializedMeta = MapPointStruct(_context.embeddings.FirstOrDefault(x => x.CollectionName == collectionIdentifier)?.Metadata ?? "");
-            if (clearFirst)
+            if(embedding is not null)
             {
-                deserializedMeta.FirstOrDefault(x=>x.Id==ParsePointId(id))?.Payload.Clear();
+                var deserializedMeta = MapPointStruct(embedding?.Metadata ?? "");
+                if (clearFirst)
+                {
+                    deserializedMeta.FirstOrDefault(x=>x.Id==ParsePointId(id))?.Payload.Clear();
+                }
+                deserializedMeta.FirstOrDefault(x => x.Id == ParsePointId(id))?.Payload.Add(payload);
+                embedding!.Metadata =JsonConvert.SerializeObject(deserializedMeta);
+                _context.embeddings.Update(embedding);
+                await _context.SaveChangesAsync(cancellationToken);
             }
-            deserializedMeta.FirstOrDefault(x => x.Id == ParsePointId(id))?.Payload.Add(payload);
-            embedding.Metadata =JsonConvert.SerializeObject(deserializedMeta);
-            _context.embeddings.Update(embedding);
-            await _context.SaveChangesAsync(cancellationToken);
         }
 
         public async Task UpsertAsync(string collectionIdentifier, string id, float[] vectors, MetadataCollection metadata, CancellationToken cancellationToken = default)
@@ -283,14 +286,20 @@ namespace BlinkChatBackend.Helpers
             }
 
             CancellationToken cancellationToken2 = cancellationToken;
-            PointStruct[] points = new PointStruct[1] { pointStruct };
             
             var embedding = _context.embeddings.FirstOrDefault(x => x.CollectionName == collectionIdentifier);
-            embedding.Metadata = JsonConvert.SerializeObject(points);
-            
-            _context.embeddings.Update(embedding);
-
-            await _context.SaveChangesAsync();
+            if(embedding!=null)
+            {
+                var deserializedMeta = MapPointStruct(embedding?.Metadata ?? "");
+                List<PointStruct> points =[pointStruct];
+                if(deserializedMeta!=null && deserializedMeta.Count>0)
+                {
+                    points.AddRange(deserializedMeta);
+                }
+                embedding!.Metadata = JsonConvert.SerializeObject(points);
+                _context.embeddings.Update(embedding);
+                await _context.SaveChangesAsync();
+            }
         }
 
         private Metadata PayloadEntryToMetadata(KeyValuePair<string, Value> pair)
@@ -337,6 +346,8 @@ namespace BlinkChatBackend.Helpers
         
         private List<PointStruct> MapPointStruct(string JsonString)
         {
+            if(string.IsNullOrEmpty(JsonString)) return new List<PointStruct>();
+
             var jArray = JArray.Parse(JsonString);
             var points = new List<PointStruct>();
             foreach (var item in jArray)

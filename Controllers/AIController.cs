@@ -71,7 +71,7 @@ public class AIController(IAIService aIService) : ControllerBase
         try
         {
             Response.ContentType = "text/event-stream; charset=utf-8";
-            await aIService.GetRAGResponseVectorFromDocker(prompt, Response.Body);
+            await aIService.GetRAGResponseVector(prompt, Response.Body);
         }
         catch (Exception ex)
         {

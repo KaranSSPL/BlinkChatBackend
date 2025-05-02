@@ -179,11 +179,18 @@ namespace BlinkChatBackend.Helpers
             {
                 if (point.Payload.Count == 0)
                     continue;
-                               
                 var score = CosineSimilarity(vector,point.Vectors.Vector.Data.ToArray());
                 ScoredPoint scoredPoint = new ScoredPoint() { Id=point.Id,Score=score};
-                //if (getVector)
-                //    scoredPoint.Vectors=null;
+                if (getVector)
+                {
+                    scoredPoint.Vectors= new VectorsOutput
+                    {
+                        Vector = new VectorOutput(){
+                            Data = { point.Vectors.Vector.Data.ToArray()}
+                        }
+                    };
+                }
+                ;
                 if (getMetadata)
                     scoredPoint.Payload.Add(point.Payload);
                 scoredPoints.Add(scoredPoint);

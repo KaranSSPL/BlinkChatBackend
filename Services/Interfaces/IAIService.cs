@@ -1,6 +1,6 @@
 ﻿using BlinkChatBackend.Models;
 
-namespace BlinkChatBackend.Services;
+namespace BlinkChatBackend.Services.Interfaces;
 
 public interface IAIService
 {

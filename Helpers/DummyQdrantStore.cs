@@ -8,6 +8,7 @@ namespace BlinkChatBackend.Helpers;
 public class DummyQdrantStore : IVectorStore
 {
     private readonly QdrantClient _client;
+
     public DummyQdrantStore(Uri address, string apiKey = null, string certificateThumbprint = null)
     {
         if (!string.IsNullOrWhiteSpace(certificateThumbprint))
@@ -24,6 +25,7 @@ public class DummyQdrantStore : IVectorStore
             _client = new QdrantClient(address ?? throw new ArgumentNullException("address"), apiKey);
         }
     }
+
     public DummyQdrantStore(QdrantGrpcClient grpcClient)
     {
         _client = new QdrantClient(grpcClient);

@@ -1,8 +1,13 @@
 ﻿using BlinkChatBackend.Helpers;
 using BlinkChatBackend.Services.Interfaces;
+using LMKit.Agents;
 using LMKit.Data;
 using LMKit.Model;
 using LMKit.Retrieval;
+using LMKit.TextGeneration;
+using LMKit.TextGeneration.Chat;
+using LMKit.TextGeneration.Sampling;
+using System.Text;
 
 namespace BlinkChatBackend.Services;
 
@@ -19,9 +24,9 @@ public class LmKitModelService(ILogger<LmKitModelService> logger) : ILmKitModelS
         Model = new LM(path, loadingProgress: ModelLoadingProgress);
     }
 
-    public void LoadModel(Uri uri)
+    public void LoadModel(Uri uri, string? storagePath = null)
     {
-        Model = new LM(uri, downloadingProgress: ModelDownloadingProgress, loadingProgress: ModelLoadingProgress);
+        Model = new LM(uri, storagePath: storagePath, downloadingProgress: ModelDownloadingProgress, loadingProgress: ModelLoadingProgress);
     }
 
     public void LoadModel(ModelCard modelCard)
@@ -40,9 +45,9 @@ public class LmKitModelService(ILogger<LmKitModelService> logger) : ILmKitModelS
         EmbeddingModel = new LM(path, loadingProgress: ModelLoadingProgress);
     }
 
-    public void LoadEmbeddingModel(Uri uri)
+    public void LoadEmbeddingModel(Uri uri, string? storagePath = null)
     {
-        EmbeddingModel = new LM(uri, downloadingProgress: ModelDownloadingProgress, loadingProgress: ModelLoadingProgress);
+        EmbeddingModel = new LM(uri, storagePath: storagePath, downloadingProgress: ModelDownloadingProgress, loadingProgress: ModelLoadingProgress);
     }
 
     public void LoadEmbeddingModel(ModelCard modelCard)
@@ -98,7 +103,8 @@ public class LmKitModelService(ILogger<LmKitModelService> logger) : ILmKitModelS
     {
         if (RagEngine == null) throw new ArgumentException("RAG engine is not loaded.");
         if (DataSource == null) throw new ArgumentException("Data source is not loaded.");
-        RagEngine.AddDataSource(DataSource);
+        if (!RagEngine.TryGetDataSource(CollectionName, out _))
+            RagEngine.AddDataSource(DataSource);
     }
 
     public void LoadFilesIntoDataSource(string fileName, string sectionIdentifier)
@@ -126,6 +132,37 @@ public class LmKitModelService(ILogger<LmKitModelService> logger) : ILmKitModelS
     }
 
     #endregion [RAG engine]
+
+    #region [Memory]
+
+    public AgentMemory? Memory { get; private set; }
+
+    #endregion [Memory]
+
+    #region [MultiTurn Conversation]
+
+    public MultiTurnConversation? MultiTurnConversation { get; private set; }
+
+    public void LoadMultiTurnConversation(ChatHistory? chatHistory = null)
+    {
+        if (Model == null) throw new ArgumentException("Model is not loaded.");
+
+        if (chatHistory == null)
+            MultiTurnConversation = new MultiTurnConversation(Model, contextSize: 4096);
+        else
+            MultiTurnConversation = new MultiTurnConversation(Model, chatHistory, contextSize: 4096);
+
+        MultiTurnConversation.MaximumCompletionTokens = 512;
+        MultiTurnConversation.SamplingMode = new GreedyDecoding();
+        MultiTurnConversation.SystemPrompt = "You are a chatbot that only responds to questions that are related to .Net. Simply reply with 'I don't know' when prompt is not related to .Net.";
+
+        if (Memory != null)
+            MultiTurnConversation.Memory = Memory;
+    }
+
+
+
+    #endregion [MultiTurn Conversation]
 
     #region [Private methods]
 

@@ -4,7 +4,6 @@ using LMKit.Global;
 using LMKit.Retrieval;
 using LMKit.TextGeneration;
 using LMKit.TextGeneration.Chat;
-using LMKit.TextGeneration.Sampling;
 using Microsoft.Extensions.Caching.Distributed;
 using Newtonsoft.Json;
 using System.Text;
@@ -44,11 +43,13 @@ public class LmKitService(ILogger<LmKitService> logger,
             if (lmKitModelService.Model == null)
             {
                 lmKitModelService.LoadModel(Path.Combine(webHostEnvironment.WebRootPath, "Models", "gemma-3-4b-it-Q4_K_M.lmk"));
+                //lmKitModelService.LoadModel(new Uri("https://huggingface.co/lm-kit/gemma-3-4b-instruct-lmk/resolve/main/gemma-3-4b-it-Q4_K_M.lmk?download=true"), Path.Combine(webHostEnvironment.WebRootPath, "Models"));
             }
 
             if (lmKitModelService.EmbeddingModel == null)
             {
                 lmKitModelService.LoadEmbeddingModel(Path.Combine(webHostEnvironment.WebRootPath, "Models", "gemma-3-4b-it-Q4_K_M.lmk"));
+                //lmKitModelService.LoadEmbeddingModel(new Uri("https://huggingface.co/lm-kit/bge-1.5-gguf/resolve/main/bge-small-en-v1.5-f16.gguf?download=true"), Path.Combine(webHostEnvironment.WebRootPath, "Models"));
             }
 
             if (string.IsNullOrEmpty(lmKitModelService.CollectionName))
@@ -70,48 +71,42 @@ public class LmKitService(ILogger<LmKitService> logger,
 
             lmKitModelService.LoadFilesIntoDataSource(Path.Combine(webHostEnvironment.WebRootPath, "Ebooks", "Architecting-Modern-Web-Applications-with-ASP.NET-Core-and-Azure.txt"), "ASP .NET Core");
 
-            using var chat = new MultiTurnConversation(lmKitModelService.Model, LoadChatHistory(request.SessionId))
+            //if (lmKitModelService.MultiTurnConversation == null)
             {
-                // Using defaults.
-                MaximumCompletionTokens = 512,
-                SamplingMode = new RandomSampling()
-                {
-                    Temperature = 0.8f
-                },
-                SystemPrompt = "You are a chatbot that only responds to questions that are related to .Net. Simply reply with 'I don't know' when prompt is not related to .Net.",
-            };
+                lmKitModelService.LoadMultiTurnConversation(LoadChatHistory(request.SessionId));
 
-            chat.AfterTokenSampling += async (sender, token) =>
-            {
-                if (token.TextChunk == "<|im_end|>")
+                lmKitModelService.MultiTurnConversation!.AfterTokenSampling += async (sender, token) =>
                 {
-                    await SaveChatHistoryAsync(chat.ChatHistory, request.SessionId);
-                    return;
-                }
-                var buffer = Encoding.UTF8.GetBytes(token.TextChunk);
-                await httpResponse.Body.WriteAsync(buffer, cancellationToken);
-                await httpResponse.Body.FlushAsync(cancellationToken);
-            };
+                    if (token.TextChunk == "<|im_end|>" || token.TextChunk == "<end_of_turn>")
+                    {
+                        await SaveChatHistoryAsync(lmKitModelService.MultiTurnConversation.ChatHistory, request.SessionId);
+                        return;
+                    }
+                    var buffer = Encoding.UTF8.GetBytes(token.TextChunk);
+                    await httpResponse.Body.WriteAsync(buffer, cancellationToken);
+                    await httpResponse.Body.FlushAsync(cancellationToken);
+                };
+            }
 
             // Determine the number of top partitions to select based on GPU support.
             // If GPU is available, select the top 3 partitions; otherwise, select only the top 1 to maintain acceptable speed.
             int topK = Runtime.HasGpuSupport ? 3 : 1;
-            List<PartitionSimilarity>? partitions = lmKitModelService.RagEngine?
-                .FindMatchingPartitions(request.Question, topK, forceUniqueSection: true, cancellationToken: cancellationToken);
-
+            List<PartitionSimilarity>? partitions = lmKitModelService.RagEngine!
+                .FindMatchingPartitions(request.Question, topK, cancellationToken: cancellationToken);
+            TextGenerationResult? result = null;
             if (request.Regenerate)
             {
-                await chat.RegenerateResponseAsync(new CancellationTokenSource(TimeSpan.FromMinutes(2)).Token);
+                result = await lmKitModelService.MultiTurnConversation.RegenerateResponseAsync(new CancellationTokenSource(TimeSpan.FromMinutes(2)).Token);
             }
             else if (request.Reset)
             {
                 distributedCache.Remove(request.SessionId);
-                chat.ClearHistory();
+                lmKitModelService.MultiTurnConversation.ClearHistory();
             }
             else if (partitions != null && partitions.Count > 0)
             {
                 logger.LogInformation("Answer from {SectionIdentifier}", partitions[0].SectionIdentifier);
-                _ = lmKitModelService.RagEngine?.QueryPartitions(request.Question, partitions, chat, cancellationToken);
+                result = await lmKitModelService.RagEngine.QueryPartitionsAsync(request.Question, partitions, lmKitModelService.MultiTurnConversation, cancellationToken);
             }
             else
             {

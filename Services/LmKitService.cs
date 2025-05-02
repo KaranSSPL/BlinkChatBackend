@@ -43,12 +43,12 @@ public class LmKitService(ILogger<LmKitService> logger,
 
             if (lmKitModelService.Model == null)
             {
-                lmKitModelService.LoadModel("D:\\AI-models\\deepseek-coder-1.3b-base-GGUF\\deepseek-coder-1.3b-base.Q2_K.gguf");
+                lmKitModelService.LoadModel(Path.Combine(webHostEnvironment.WebRootPath, "Models", "gemma-3-4b-it-Q4_K_M.lmk"));
             }
 
             if (lmKitModelService.EmbeddingModel == null)
             {
-                lmKitModelService.LoadEmbeddingModel("D:\\AI-models\\bge-1.5-gguf\\bge-small-en-v1.5-f16.gguf");
+                lmKitModelService.LoadEmbeddingModel(Path.Combine(webHostEnvironment.WebRootPath, "Models", "gemma-3-4b-it-Q4_K_M.lmk"));
             }
 
             if (string.IsNullOrEmpty(lmKitModelService.CollectionName))
@@ -68,7 +68,7 @@ public class LmKitService(ILogger<LmKitService> logger,
 
             lmKitModelService.LoadDataSourceIntoRagEngine();
 
-            lmKitModelService.LoadFilesIntoDataSource("Architecting-Modern-Web-Applications-with-ASP.NET-Core-and-Azure.txt", "ASP .NET Core", Path.Combine(webHostEnvironment.WebRootPath, "Ebooks"));
+            lmKitModelService.LoadFilesIntoDataSource(Path.Combine(webHostEnvironment.WebRootPath, "Ebooks", "Architecting-Modern-Web-Applications-with-ASP.NET-Core-and-Azure.txt"), "ASP .NET Core");
 
             using var chat = new MultiTurnConversation(lmKitModelService.Model, LoadChatHistory(request.SessionId))
             {

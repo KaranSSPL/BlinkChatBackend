@@ -43,7 +43,7 @@ public interface ILmKitModelService
     RagEngine? RagEngine { get; }
     void LoadRagEngine();
     void LoadDataSourceIntoRagEngine();
-    void LoadFilesIntoDataSource(string fileName, string sectionIdentifier, string? filePath = null);
+    void LoadFilesIntoDataSource(string fileName, string sectionIdentifier);
 
     #endregion [RAG engine]
 }

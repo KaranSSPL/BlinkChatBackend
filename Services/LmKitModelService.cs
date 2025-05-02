@@ -101,7 +101,7 @@ public class LmKitModelService(ILogger<LmKitModelService> logger) : ILmKitModelS
         RagEngine.AddDataSource(DataSource);
     }
 
-    public void LoadFilesIntoDataSource(string fileName, string sectionIdentifier, string? filePath = null)
+    public void LoadFilesIntoDataSource(string fileName, string sectionIdentifier)
     {
         if (RagEngine == null) throw new ArgumentException("RAG engine is not loaded.");
         if (DataSource == null) throw new ArgumentException("Data source is not loaded.");
@@ -115,16 +115,14 @@ public class LmKitModelService(ILogger<LmKitModelService> logger) : ILmKitModelS
             return;  //we already have this ebook in the collection
         }
 
-        string completeFilePath = string.IsNullOrWhiteSpace(filePath) ? fileName : Path.Combine(filePath, fileName);
-
-        if (!File.Exists(completeFilePath))
+        if (!File.Exists(fileName))
         {
-            logger.LogWarning("{fileName} does not exist.", completeFilePath);
+            logger.LogWarning("{fileName} does not exist.", fileName);
             return;
         }
 
         //importing the ebook into a new section
-        RagEngine.ImportText(File.ReadAllText(completeFilePath), new TextChunking() { MaxChunkSize = 500 }, CollectionName, sectionIdentifier);
+        RagEngine.ImportText(File.ReadAllText(fileName), new TextChunking() { MaxChunkSize = 500 }, CollectionName, sectionIdentifier);
     }
 
     #endregion [RAG engine]

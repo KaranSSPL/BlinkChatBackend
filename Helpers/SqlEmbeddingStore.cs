@@ -179,17 +179,15 @@ namespace BlinkChatBackend.Helpers
             {
                 if (point.Payload.Count == 0)
                     continue;
+                               
+                var score = CosineSimilarity(vector,point.Vectors.Vector.Data.ToArray());
+                ScoredPoint scoredPoint = new ScoredPoint() { Id=point.Id,Score=score};
+                //if (getVector)
+                //    scoredPoint.Vectors=null;
+                if (getMetadata)
+                    scoredPoint.Payload.Add(point.Payload);
+                scoredPoints.Add(scoredPoint);
                 
-                if (Match.Equals(vector, point.Vectors.Vector.Data.ToArray()))
-                {
-                    ScoredPoint scoredPoint = new ScoredPoint() { Id=point.Id};
-                    if (getVector)
-                        scoredPoint.Vectors.MergeFrom(point.Vectors.ToByteArray());
-                    if(getMetadata)
-                        scoredPoint.Payload.Add(point.Payload);
-                    scoredPoints.Add(scoredPoint);
-                }
-
             }
 
             List<(PointEntry, float)> list = new List<(PointEntry, float)>(scoredPoints.Count);
@@ -343,7 +341,6 @@ namespace BlinkChatBackend.Helpers
         {
             return id.Uuid.ToString();
         }
-        
         private List<PointStruct> MapPointStruct(string JsonString)
         {
             if(string.IsNullOrEmpty(JsonString)) return new List<PointStruct>();
@@ -390,6 +387,28 @@ namespace BlinkChatBackend.Helpers
                 points.Add(point);
             }
             return points;
+        }
+        private float CosineSimilarity(float[] vectorA, float[] vectorB)
+        {
+            if (vectorA.Length != vectorB.Length)
+            {
+                return 0;
+            }
+            float dot = 0f;
+            float normA = 0f;
+            float normB = 0f;
+
+            for (int i = 0; i < vectorA.Length; i++)
+            {
+                dot += vectorA[i] * vectorB[i];
+                normA += vectorA[i] * vectorA[i];
+                normB += vectorB[i] * vectorB[i];
+            }
+
+            var cosineSimilarity = dot / (float)(Math.Sqrt(normA) * Math.Sqrt(normB));
+            if(cosineSimilarity is float.NaN)
+                return 0.0f;
+            return cosineSimilarity;
         }
     }
 }

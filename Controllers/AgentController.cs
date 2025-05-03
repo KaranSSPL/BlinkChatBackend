@@ -8,8 +8,7 @@ namespace BlinkChatBackend.Controllers;
 [Route("api/[controller]")]
 public class AgentController(ILmKitService lmKitService) : ControllerBase
 {
-
-    [HttpPost("agent")]
+    [HttpPost]
     public async Task GetAgentResponseAsync(UserRequest prompt, CancellationToken cancellationToken) =>
         await lmKitService.GenerateResponseAsync(prompt, cancellationToken);
 }

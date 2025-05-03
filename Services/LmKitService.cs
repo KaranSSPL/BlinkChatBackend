@@ -47,7 +47,7 @@ public class LmKitService(ILogger<LmKitService> logger,
                 if (File.Exists(path))
                     lmKitModelService.LoadModel(path);
                 else
-                    lmKitModelService.LoadModel(new Uri("https://huggingface.co/lm-kit/gemma-3-1b-instruct-gguf/resolve/main/gemma-3-it-1B-Q4_K_M.gguf?download=true"), Path.Combine(webHostEnvironment.WebRootPath, "models"));
+                    lmKitModelService.LoadModel(new Uri("https://huggingface.co/lm-kit/gemma-3-1b-instruct-gguf/resolve/main/gemma-3-it-1B-Q4_K_M.gguf?download=true"), path);
             }
 
             if (lmKitModelService.EmbeddingModel == null)
@@ -56,7 +56,7 @@ public class LmKitService(ILogger<LmKitService> logger,
                 if (File.Exists(path))
                     lmKitModelService.LoadEmbeddingModel(path);
                 else
-                    lmKitModelService.LoadEmbeddingModel(new Uri("https://huggingface.co/lm-kit/bge-1.5-gguf/resolve/main/bge-small-en-v1.5-f16.gguf?download=true"), Path.Combine(webHostEnvironment.WebRootPath, "models"));
+                    lmKitModelService.LoadEmbeddingModel(new Uri("https://huggingface.co/lm-kit/bge-1.5-gguf/resolve/main/bge-small-en-v1.5-f16.gguf?download=true"), path);
             }
 
             if (string.IsNullOrEmpty(lmKitModelService.CollectionName))

@@ -17,6 +17,7 @@ namespace BlinkChatBackend.Helpers
         {
             _context = context;
         }
+
         public async Task<bool> CollectionExistsAsync(string collectionIdentifier, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(collectionIdentifier))
@@ -336,6 +337,7 @@ namespace BlinkChatBackend.Helpers
 
             return new Metadata(pair.Key, pair.Value.ToString());
         }
+        
         private PointId ParsePointId(string id)
         {
             if (Guid.TryParse(id, out var result2))
@@ -344,6 +346,7 @@ namespace BlinkChatBackend.Helpers
             }
             throw new ArgumentException("The provided id is neither a valid unsigned long nor a GUID.", "id");
         }
+        
         private string PointIdToString(PointId id)
         {
             return id.Uuid.ToString();

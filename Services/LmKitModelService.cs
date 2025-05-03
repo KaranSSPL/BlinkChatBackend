@@ -7,7 +7,6 @@ using LMKit.Retrieval;
 using LMKit.TextGeneration;
 using LMKit.TextGeneration.Chat;
 using LMKit.TextGeneration.Sampling;
-using System.Text;
 
 namespace BlinkChatBackend.Services;
 
@@ -148,9 +147,9 @@ public class LmKitModelService(ILogger<LmKitModelService> logger) : ILmKitModelS
         if (Model == null) throw new ArgumentException("Model is not loaded.");
 
         if (chatHistory == null)
-            MultiTurnConversation = new MultiTurnConversation(Model, contextSize: 4096);
+            MultiTurnConversation = new MultiTurnConversation(Model, contextSize: -1);
         else
-            MultiTurnConversation = new MultiTurnConversation(Model, chatHistory, contextSize: 4096);
+            MultiTurnConversation = new MultiTurnConversation(Model, chatHistory, contextSize: -1);
 
         MultiTurnConversation.MaximumCompletionTokens = 512;
         MultiTurnConversation.SamplingMode = new GreedyDecoding();

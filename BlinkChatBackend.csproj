@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="wwwroot\Models\" />
+    <Folder Include="wwwroot\models\" />
   </ItemGroup>
 
 </Project>

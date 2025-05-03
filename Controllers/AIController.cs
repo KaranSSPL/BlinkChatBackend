@@ -1,5 +1,3 @@
-using BlinkChatBackend.Models;
-using BlinkChatBackend.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BlinkChatBackend.Controllers;

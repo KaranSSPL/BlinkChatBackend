@@ -20,7 +20,7 @@ services:
       - REDIS_HOST=blink-chat-backend-redis
       - REDIS_PORT=6379
     depends_on:
-      - blink-chat-backend-redis
+      - redis
     networks:
       - redis-network
       
@@ -32,11 +32,14 @@ services:
       - "6334:6334"
     volumes:
       - D:\docker-volume\blinkchat\qdrant:/qdrant/storage:z
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+      - QDRANT__SERVICE__HTTP_PORT=6333
     networks:
       - redis-network
     
   backend:
-    image: karansspl2021/blinkchatbackend:latest
+    image: karansspl2021/blinkchatbackend:v1
     container_name: blinkchatbackend
     ports:
       - "5273:80"
@@ -46,8 +49,12 @@ services:
       - ASPNETCORE_ENVIRONMENT=development
       - LM__licensekey=019B0C0-100235-C295A6-032129-B2D000-000525-049078-406173-9113D7-A2
       - ConnectionStrings__Redis=blink-chat-backend-redis:6379
+      - ConnectionStrings__Qdrant=http://qdrant:6333
       - ASPNETCORE_URLS=http://+:80
       - ASPNETCORE_HTTPS_PORT=5273
+    depends_on:
+      - redisinsight
+      - qdrant
     networks:
       - redis-network
 
@@ -58,6 +65,8 @@ services:
       - "3000:3000"
     environment:
       - CHATBOT_API_BASE_URL=http://localhost:5273
+    depends_on:
+      - backend
     networks:
       - redis-network
 

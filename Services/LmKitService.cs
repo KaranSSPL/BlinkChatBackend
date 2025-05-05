@@ -42,7 +42,7 @@ public class LmKitService(ILogger<LmKitService> logger,
 
             if (lmKitModelService.Model == null || lmKitModelService.EmbeddingModel == null)
             {
-                LoadModelsFromConfigurationAsync();
+                await LoadModelsFromConfigurationAsync();
             }
 
             using var chat = new MultiTurnConversation(lmKitModelService.Model, LoadChatHistory(request.SessionId))

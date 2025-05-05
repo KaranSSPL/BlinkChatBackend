@@ -49,7 +49,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=development
       - LM__licensekey=019B0C0-100235-C295A6-032129-B2D000-000525-049078-406173-9113D7-A2
       - ConnectionStrings__Redis=blink-chat-backend-redis:6379
-      - ConnectionStrings__Qdrant=http://qdrant:6333
+      - ConnectionStrings__Qdrant=http://qdrant:6334
       - ASPNETCORE_URLS=http://+:80
       - ASPNETCORE_HTTPS_PORT=5273
     depends_on:

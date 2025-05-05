@@ -1,5 +1,6 @@
 ﻿using LMKit.Agents;
 using LMKit.Data;
+using LMKit.Data.Storage;
 using LMKit.Model;
 using LMKit.Retrieval;
 using LMKit.TextGeneration;
@@ -34,6 +35,14 @@ public interface ILmKitModelService
 
     #endregion [RAG CollectionName]
 
+    #region [RAG Vector Store]    
+
+    IVectorStore? VectorStore { get; }
+    List<DataSource>? VectorDataSources { get; }
+    void LoadVectorStore(Uri value);
+
+    #endregion [RAG Vector Store]
+
     #region [RAG data source]
 
     DataSource? DataSource { get; }
@@ -46,7 +55,10 @@ public interface ILmKitModelService
     RagEngine? RagEngine { get; }
     void LoadRagEngine();
     void LoadDataSourceIntoRagEngine();
+    void LoadVectorStoreRagEngine();
+    void LoadDataSourceIntoVectorStoreRagEngine();
     void LoadFilesIntoDataSource(string fileName, string sectionIdentifier);
+    void LoadFilesIntoVectorDataSource(string fileName, string sectionIdentifier);
 
     #endregion [RAG engine]
 

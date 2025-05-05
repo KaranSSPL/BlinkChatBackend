@@ -147,43 +147,75 @@ public class LmKitService(ILogger<LmKitService> logger,
             logger.LogInformation("Loaded embedding model..");
         }
 
-        var collectionName = configuration["LM:CollectionName"] ?? "ebook-collection";
-
+        var collectionName = configuration["LM:CollectionName"];
+        ArgumentException.ThrowIfNullOrWhiteSpace(collectionName, "CollectionName is null or empty.");
         if (string.IsNullOrEmpty(lmKitModelService.CollectionName))
         {
             lmKitModelService.AddCollectionName(collectionName);
             logger.LogInformation("Collection name is set to {collectionName}.", collectionName);
         }
 
-        if (lmKitModelService.DataSource == null)
+        var qdrantConnectionString = configuration.GetConnectionString("Qdrant");
+        if (string.IsNullOrEmpty(qdrantConnectionString))
         {
-            lmKitModelService.LoadDataSource(Path.Combine(webHostEnvironment.WebRootPath, "collections", collectionName + ".dat"));
-            logger.LogInformation("Data source is loaded.");
-        }
-
-        if (lmKitModelService.RagEngine == null)
-        {
-            lmKitModelService.LoadRagEngine();
-            logger.LogInformation("RAG engine is loaded.");
-        }
-
-        lmKitModelService.LoadDataSourceIntoRagEngine();
-        logger.LogInformation("Data source is loaded into RAG engine.");
-
-        if (Directory.Exists(Path.Combine(webHostEnvironment.WebRootPath, "source-files")))
-        {
-            var files = Directory.GetFiles(Path.Combine(webHostEnvironment.WebRootPath, "source-files"));
-            foreach (var file in files)
+            if (lmKitModelService.DataSource == null)
             {
-                lmKitModelService.LoadFilesIntoDataSource(file, Path.GetFileNameWithoutExtension(file));
+                lmKitModelService.LoadDataSource(Path.Combine(webHostEnvironment.WebRootPath, "collections", collectionName + ".dat"));
+                logger.LogInformation("Data source is loaded.");
             }
-            logger.LogInformation("Files are loaded into data source.");
-        }
 
-        //lmKitModelService.LoadFilesIntoDataSource(Path.Combine(webHostEnvironment.WebRootPath, "ebooks", "harekrishna.txt"), "harekrishna");
+            if (lmKitModelService.RagEngine == null)
+            {
+                lmKitModelService.LoadRagEngine();
+                logger.LogInformation("RAG engine is loaded.");
+            }
+
+            lmKitModelService.LoadDataSourceIntoRagEngine();
+            logger.LogInformation("Data source is loaded into RAG engine.");
+
+            if (Directory.Exists(Path.Combine(webHostEnvironment.WebRootPath, "source-files")))
+            {
+                var files = Directory.GetFiles(Path.Combine(webHostEnvironment.WebRootPath, "source-files"));
+                foreach (var file in files)
+                {
+                    lmKitModelService.LoadFilesIntoDataSource(file, Path.GetFileNameWithoutExtension(file));
+                }
+                logger.LogInformation("Files are loaded into data source.");
+            }
+
+            //lmKitModelService.LoadFilesIntoDataSource(Path.Combine(webHostEnvironment.WebRootPath, "ebooks", "harekrishna.txt"), "harekrishna");
+        }
+        else
+        {
+            if (lmKitModelService.VectorStore == null)
+            {
+                lmKitModelService.LoadVectorStore(new Uri(qdrantConnectionString));
+                logger.LogInformation("Vector store is loaded.");
+            }
+
+            if (Directory.Exists(Path.Combine(webHostEnvironment.WebRootPath, "source-files")))
+            {
+                var files = Directory.GetFiles(Path.Combine(webHostEnvironment.WebRootPath, "source-files"));
+                foreach (var file in files)
+                {
+                    lmKitModelService.LoadFilesIntoVectorDataSource(file, Path.GetFileNameWithoutExtension(file));
+                }
+                logger.LogInformation("Files are loaded into data source.");
+            }
+
+            if (lmKitModelService.RagEngine == null)
+            {
+                lmKitModelService.LoadVectorStoreRagEngine();
+                logger.LogInformation("RAG engine is loaded.");
+            }
+
+            lmKitModelService.LoadDataSourceIntoVectorStoreRagEngine();
+        }
     }
 
     #endregion [Load Models]
+
+    #region [Model Loading Progress]
 
     private ChatHistory LoadChatHistory(string sessionId)
     {
@@ -220,4 +252,6 @@ public class LmKitService(ILogger<LmKitService> logger,
         var json = JsonConvert.SerializeObject(message);
         await distributedCache.SetStringAsync(sessionId, json);
     }
+
+    #endregion [Model Loading Progress]
 }

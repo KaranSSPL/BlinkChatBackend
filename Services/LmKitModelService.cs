@@ -1,7 +1,8 @@
-﻿using BlinkChatBackend.Helpers;
-using BlinkChatBackend.Services.Interfaces;
+﻿using BlinkChatBackend.Services.Interfaces;
 using LMKit.Agents;
 using LMKit.Data;
+using LMKit.Data.Storage;
+using LMKit.Data.Storage.Qdrant;
 using LMKit.Model;
 using LMKit.Retrieval;
 using LMKit.TextGeneration;
@@ -20,6 +21,7 @@ public class LmKitModelService(ILogger<LmKitModelService> logger) : ILmKitModelS
 
     public void LoadModel(string path)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path, "Model path is null or empty.");
         Model = new LM(path, loadingProgress: ModelLoadingProgress);
     }
 
@@ -62,11 +64,25 @@ public class LmKitModelService(ILogger<LmKitModelService> logger) : ILmKitModelS
 
     public void AddCollectionName(string value)
     {
-        if (string.IsNullOrWhiteSpace(value)) throw new ArgumentException("Collection name cannot be null or empty.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(value, "Collection name cannot be null or empty.");
         CollectionName = value;
     }
 
     #endregion [RAG CollectionName]
+
+    #region [RAG Vector Store]    
+
+    public IVectorStore? VectorStore { get; private set; }
+
+    public List<DataSource>? VectorDataSources { get; } = [];
+
+    public void LoadVectorStore(Uri value)
+    {
+        if (value == null) throw new ArgumentException("Vector Store URI cannot be null or empty.");
+        VectorStore = new QdrantEmbeddingStore(value);
+    }
+
+    #endregion [RAG Vector Store]
 
     #region [RAG data source]
 
@@ -75,7 +91,8 @@ public class LmKitModelService(ILogger<LmKitModelService> logger) : ILmKitModelS
     public void LoadDataSource(string path)
     {
         if (EmbeddingModel == null) throw new ArgumentException("Embedding Model is not loaded.");
-        if (string.IsNullOrWhiteSpace(CollectionName)) throw new ArgumentException("Collection name is not set.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(CollectionName, "Collection name is not set.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(CollectionName, "Data source path is null or empty.");
 
         if (File.Exists(path))
         {
@@ -106,13 +123,25 @@ public class LmKitModelService(ILogger<LmKitModelService> logger) : ILmKitModelS
             RagEngine.AddDataSource(DataSource);
     }
 
+    public void LoadVectorStoreRagEngine()
+    {
+        RagEngine = new RagEngine(EmbeddingModel, VectorStore);
+    }
+
+    public void LoadDataSourceIntoVectorStoreRagEngine()
+    {
+        if (RagEngine == null) throw new ArgumentException("RAG engine is not loaded.");
+        if (VectorDataSources == null) throw new ArgumentException("Vector data source is not loaded.");
+        RagEngine.AddDataSources(VectorDataSources);
+    }
+
     public void LoadFilesIntoDataSource(string fileName, string sectionIdentifier)
     {
         if (RagEngine == null) throw new ArgumentException("RAG engine is not loaded.");
         if (DataSource == null) throw new ArgumentException("Data source is not loaded.");
-        if (string.IsNullOrWhiteSpace(CollectionName)) throw new ArgumentException("Collection name is not set.");
-        if (string.IsNullOrWhiteSpace(sectionIdentifier)) throw new ArgumentException("Section identifier cannot be null or empty.");
-        if (string.IsNullOrWhiteSpace(fileName)) throw new ArgumentException("File name cannot be null or empty.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(CollectionName, "Collection name is not set.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(sectionIdentifier, "Section identifier cannot be null or empty.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName, "File name cannot be null or empty.");
 
         if (DataSource.HasSection(sectionIdentifier))
         {
@@ -128,6 +157,35 @@ public class LmKitModelService(ILogger<LmKitModelService> logger) : ILmKitModelS
 
         //importing the ebook into a new section
         RagEngine.ImportText(File.ReadAllText(fileName), new TextChunking() { MaxChunkSize = 500 }, CollectionName, sectionIdentifier);
+    }
+
+    public void LoadFilesIntoVectorDataSource(string fileName, string sectionIdentifier)
+    {
+        if (VectorDataSources == null) throw new ArgumentException("Vector data source is not loaded.");
+        if (VectorStore == null) throw new ArgumentException("Vector store is not loaded.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(CollectionName, "Collection name is not set.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(sectionIdentifier, "Section identifier cannot be null or empty.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName, "File name cannot be null or empty.");
+
+        if (VectorStore.CollectionExistsAsync(sectionIdentifier).Result)
+        {
+            //using cached version
+            logger.LogInformation("{sectionIdentifier} loading datasource from store.", sectionIdentifier);
+            var cachedDataSource = DataSource.LoadFromStore(VectorStore, sectionIdentifier, EmbeddingModel);
+            VectorDataSources.Add(cachedDataSource);
+            return;
+        }
+
+        if (!File.Exists(fileName))
+        {
+            logger.LogWarning("{fileName} does not exist.", fileName);
+            return;
+        }
+
+        RagEngine ragEngine = new(EmbeddingModel, VectorStore);
+        var dataSource = ragEngine.ImportText(File.ReadAllText(fileName), new TextChunking() { MaxChunkSize = 500 }, sectionIdentifier, "default");
+        VectorDataSources.Add(dataSource);
+        return;
     }
 
     #endregion [RAG engine]

@@ -1,5 +1,5 @@
 services:
-  blink-chat-backend-redis:
+  redis:
     image: redis:latest
     container_name: blink-chat-backend-redis
     ports:
@@ -9,7 +9,7 @@ services:
     networks:
       - redis-network
 
-  blink-chat-backend-redisinsight:
+  redisinsight:
     image: redis/redisinsight:latest
     container_name: blink-chat-backend-redisinsight
     ports:
@@ -23,8 +23,19 @@ services:
       - blink-chat-backend-redis
     networks:
       - redis-network
+      
+  qdrant:
+    image: qdrant/qdrant
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - D:\docker-volume\blinkchat\qdrant:/qdrant/storage:z
+    networks:
+      - redis-network
     
-  blinkchatbackend:
+  backend:
     image: karansspl2021/blinkchatbackend:latest
     container_name: blinkchatbackend
     ports:
@@ -40,7 +51,7 @@ services:
     networks:
       - redis-network
 
-  blinkchatfrontend:
+  frontend:
     image: karansspl2021/blinkchatfrontend:latest
     container_name: blinkchatfrontend
     ports:

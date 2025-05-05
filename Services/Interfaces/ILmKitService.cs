@@ -8,7 +8,7 @@ public interface ILmKitService
 
     #region [Load Models]
 
-    void LoadModelsFromConfiguration();
+    Task LoadModelsFromConfigurationAsync();
 
     #endregion [Load Models]
 }

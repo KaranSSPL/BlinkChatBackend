@@ -131,7 +131,7 @@ public class LmKitModelService(ILogger<LmKitModelService> logger) : ILmKitModelS
     public void LoadDataSourceIntoVectorStoreRagEngine()
     {
         if (RagEngine == null) throw new ArgumentException("RAG engine is not loaded.");
-        if (VectorDataSources == null) throw new ArgumentException("Vector data source is not loaded.");
+        if (VectorDataSources == null || VectorDataSources.Count == 0) throw new ArgumentException("Vector data source is not loaded.");
         RagEngine.AddDataSources(VectorDataSources);
     }
 
@@ -159,7 +159,7 @@ public class LmKitModelService(ILogger<LmKitModelService> logger) : ILmKitModelS
         RagEngine.ImportText(File.ReadAllText(fileName), new TextChunking() { MaxChunkSize = 500 }, CollectionName, sectionIdentifier);
     }
 
-    public void LoadFilesIntoVectorDataSource(string fileName, string sectionIdentifier)
+    public async Task LoadFilesIntoVectorDataSourceAsync(string fileName, string sectionIdentifier)
     {
         if (VectorDataSources == null) throw new ArgumentException("Vector data source is not loaded.");
         if (VectorStore == null) throw new ArgumentException("Vector store is not loaded.");
@@ -167,11 +167,11 @@ public class LmKitModelService(ILogger<LmKitModelService> logger) : ILmKitModelS
         ArgumentException.ThrowIfNullOrWhiteSpace(sectionIdentifier, "Section identifier cannot be null or empty.");
         ArgumentException.ThrowIfNullOrWhiteSpace(fileName, "File name cannot be null or empty.");
 
-        if (VectorStore.CollectionExistsAsync(sectionIdentifier).Result)
+        if (await VectorStore.CollectionExistsAsync(sectionIdentifier))
         {
             //using cached version
             logger.LogInformation("{sectionIdentifier} loading datasource from store.", sectionIdentifier);
-            var cachedDataSource = DataSource.LoadFromStore(VectorStore, sectionIdentifier, EmbeddingModel);
+            var cachedDataSource = await DataSource.LoadFromStoreAsync(VectorStore, sectionIdentifier, EmbeddingModel);
             VectorDataSources.Add(cachedDataSource);
             return;
         }
@@ -183,7 +183,7 @@ public class LmKitModelService(ILogger<LmKitModelService> logger) : ILmKitModelS
         }
 
         RagEngine ragEngine = new(EmbeddingModel, VectorStore);
-        var dataSource = ragEngine.ImportText(File.ReadAllText(fileName), new TextChunking() { MaxChunkSize = 500 }, sectionIdentifier, "default");
+        var dataSource = await ragEngine.ImportTextAsync(File.ReadAllText(fileName), new TextChunking() { MaxChunkSize = 500 }, sectionIdentifier, "default");
         VectorDataSources.Add(dataSource);
         return;
     }

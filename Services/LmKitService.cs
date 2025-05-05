@@ -42,7 +42,7 @@ public class LmKitService(ILogger<LmKitService> logger,
 
             if (lmKitModelService.Model == null || lmKitModelService.EmbeddingModel == null)
             {
-                LoadModelsFromConfiguration();
+                LoadModelsFromConfigurationAsync();
             }
 
             using var chat = new MultiTurnConversation(lmKitModelService.Model, LoadChatHistory(request.SessionId))
@@ -111,7 +111,7 @@ public class LmKitService(ILogger<LmKitService> logger,
 
     #region [Load Models]
 
-    public void LoadModelsFromConfiguration()
+    public async Task LoadModelsFromConfigurationAsync()
     {
         LMKit.Licensing.LicenseManager.SetLicenseKey(configuration["LM:LicenseKey"]);
 
@@ -198,7 +198,7 @@ public class LmKitService(ILogger<LmKitService> logger,
                 var files = Directory.GetFiles(Path.Combine(webHostEnvironment.WebRootPath, "source-files"));
                 foreach (var file in files)
                 {
-                    lmKitModelService.LoadFilesIntoVectorDataSource(file, Path.GetFileNameWithoutExtension(file));
+                    await lmKitModelService.LoadFilesIntoVectorDataSourceAsync(file, Path.GetFileNameWithoutExtension(file));
                 }
                 logger.LogInformation("Files are loaded into data source.");
             }

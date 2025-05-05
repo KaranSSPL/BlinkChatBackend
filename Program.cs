@@ -70,7 +70,7 @@ try
     using (var scope = app.Services.CreateScope())
     {
         var services = scope.ServiceProvider.GetRequiredService<ILmKitService>;
-        services.Invoke().LoadModelsFromConfiguration();
+        await services.Invoke().LoadModelsFromConfigurationAsync();
     }
 
     app.MapControllers();
@@ -79,8 +79,11 @@ try
 }
 catch (Exception ex)
 {
-    Console.WriteLine("Error message: " + "\n" + ex.InnerException?.Message ?? ex.Message);
-    Console.WriteLine("Stack trace: " + "\n" + ex.StackTrace);
+    Console.WriteLine("Exception message:\t" + ex.Message);
+    Console.WriteLine("InnerException message:\t" + ex.InnerException?.Message);
+    Console.WriteLine("Stack trace:\t" + ex.StackTrace);
     Console.WriteLine("");
+
+
     Console.WriteLine("Application start-up failed. Closing... ");
 }

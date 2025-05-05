@@ -58,7 +58,7 @@ public interface ILmKitModelService
     void LoadVectorStoreRagEngine();
     void LoadDataSourceIntoVectorStoreRagEngine();
     void LoadFilesIntoDataSource(string fileName, string sectionIdentifier);
-    void LoadFilesIntoVectorDataSource(string fileName, string sectionIdentifier);
+    Task LoadFilesIntoVectorDataSourceAsync(string fileName, string sectionIdentifier);
 
     #endregion [RAG engine]
 

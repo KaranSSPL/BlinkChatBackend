@@ -1,7 +1,6 @@
 using BlinkChatBackend.Models;
 using BlinkChatBackend.Services;
 using BlinkChatBackend.Services.Interfaces;
-using LMKit.Model;
 using Microsoft.EntityFrameworkCore;
 
 try
@@ -67,6 +66,12 @@ try
     app.UseRouting();
 
     app.UseAuthorization();
+
+    using (var scope = app.Services.CreateScope())
+    {
+        var services = scope.ServiceProvider.GetRequiredService<ILmKitService>;
+        services.Invoke().LoadModelsFromConfiguration();
+    }
 
     app.MapControllers();
 

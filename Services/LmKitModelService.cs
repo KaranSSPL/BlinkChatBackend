@@ -173,7 +173,7 @@ public class LmKitModelService(ILogger<LmKitModelService> logger) : ILmKitModelS
             _isDownloading = false;
         }
 
-        LogHelper.LogInformation($"\rLoading model {Math.Round(progress * 100)}%");
+        //LogHelper.LogInformation($"\rLoading model {Math.Round(progress * 100)}%");
 
         return true;
     }
@@ -185,11 +185,11 @@ public class LmKitModelService(ILogger<LmKitModelService> logger) : ILmKitModelS
         if (contentLength.HasValue)
         {
             double progressPercentage = Math.Round((double)bytesRead / contentLength.Value * 100, 2);
-            LogHelper.LogInformation($"\rDownloading model {progressPercentage:0.00}%");
+            //LogHelper.LogInformation($"\rDownloading model {progressPercentage:0.00}%");
         }
         else
         {
-            LogHelper.LogInformation($"\rDownloading model {bytesRead} bytes");
+            //LogHelper.LogInformation($"\rDownloading model {bytesRead} bytes");
         }
         return true;
     }

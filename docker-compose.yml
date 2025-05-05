@@ -1,0 +1,55 @@
+services:
+  blink-chat-backend-redis:
+    image: redis:latest
+    container_name: blink-chat-backend-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - D:\docker-volume\blinkchat\redis:/data
+    networks:
+      - redis-network
+
+  blink-chat-backend-redisinsight:
+    image: redis/redisinsight:latest
+    container_name: blink-chat-backend-redisinsight
+    ports:
+      - "5540:5540"
+    volumes:
+      - D:\docker-volume\blinkchat\redisinsight:/data
+    environment:
+      - REDIS_HOST=blink-chat-backend-redis
+      - REDIS_PORT=6379
+    depends_on:
+      - blink-chat-backend-redis
+    networks:
+      - redis-network
+    
+  blinkchatbackend:
+    image: karansspl2021/blinkchatbackend:latest
+    container_name: blinkchatbackend
+    ports:
+      - "5273:80"
+    volumes:
+      - D:\docker-volume\blinkchat\backend:/app/wwwroot
+    environment:
+      - ASPNETCORE_ENVIRONMENT=development
+      - LM__licensekey=019B0C0-100235-C295A6-032129-B2D000-000525-049078-406173-9113D7-A2
+      - ConnectionStrings__Redis=blink-chat-backend-redis:6379
+      - ASPNETCORE_URLS=http://+:80
+      - ASPNETCORE_HTTPS_PORT=5273
+    networks:
+      - redis-network
+
+  blinkchatfrontend:
+    image: karansspl2021/blinkchatfrontend:latest
+    container_name: blinkchatfrontend
+    ports:
+      - "3000:3000"
+    environment:
+      - CHATBOT_API_BASE_URL=http://localhost:5273
+    networks:
+      - redis-network
+
+networks:
+  redis-network:
+    driver: bridge

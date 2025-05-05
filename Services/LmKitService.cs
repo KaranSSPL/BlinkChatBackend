@@ -16,10 +16,9 @@ public class LmKitService(ILogger<LmKitService> logger,
     IHttpContextAccessor httpContextAccessor,
     ILmKitModelService lmKitModelService,
     IWebHostEnvironment webHostEnvironment,
+    IConfiguration configuration,
     IDistributedCache distributedCache) : ILmKitService
 {
-    private const string CollectionName = "Ebooks";
-
     public async Task GenerateResponseAsync(UserRequest request, CancellationToken cancellationToken)
     {
         var httpResponse = httpContextAccessor.HttpContext?.Response;
@@ -41,42 +40,10 @@ public class LmKitService(ILogger<LmKitService> logger,
         {
             httpResponse.ContentType = "text/event-stream; charset=utf-8";
 
-            if (lmKitModelService.Model == null)
+            if (lmKitModelService.Model == null || lmKitModelService.EmbeddingModel == null)
             {
-                var path = Path.Combine(webHostEnvironment.WebRootPath, "models", "gemma-3-it-1B-Q4_K_M.gguf");
-                if (File.Exists(path))
-                    lmKitModelService.LoadModel(path);
-                else
-                    lmKitModelService.LoadModel(new Uri("https://huggingface.co/lm-kit/gemma-3-1b-instruct-gguf/resolve/main/gemma-3-it-1B-Q4_K_M.gguf?download=true"), path);
+                LoadModelsFromConfiguration();
             }
-
-            if (lmKitModelService.EmbeddingModel == null)
-            {
-                var path = Path.Combine(webHostEnvironment.WebRootPath, "models", "bge-small-en-v1.5-f16.gguf");
-                if (File.Exists(path))
-                    lmKitModelService.LoadEmbeddingModel(path);
-                else
-                    lmKitModelService.LoadEmbeddingModel(new Uri("https://huggingface.co/lm-kit/bge-1.5-gguf/resolve/main/bge-small-en-v1.5-f16.gguf?download=true"), path);
-            }
-
-            if (string.IsNullOrEmpty(lmKitModelService.CollectionName))
-            {
-                lmKitModelService.AddCollectionName(CollectionName);
-            }
-
-            if (lmKitModelService.DataSource == null)
-            {
-                lmKitModelService.LoadDataSource(CollectionName + ".dat");
-            }
-
-            if (lmKitModelService.RagEngine == null)
-            {
-                lmKitModelService.LoadRagEngine();
-            }
-
-            lmKitModelService.LoadDataSourceIntoRagEngine();
-
-            lmKitModelService.LoadFilesIntoDataSource(Path.Combine(webHostEnvironment.WebRootPath, "ebooks", "harekrishna.txt"), "harekrishna");
 
             using var chat = new MultiTurnConversation(lmKitModelService.Model, LoadChatHistory(request.SessionId))
             {
@@ -141,6 +108,77 @@ public class LmKitService(ILogger<LmKitService> logger,
             // Should handle response whe response already started.
         }
     }
+
+    #region [Load Models]
+
+    public void LoadModelsFromConfiguration()
+    {
+        LMKit.Licensing.LicenseManager.SetLicenseKey(configuration["LM:LicenseKey"]);
+
+        var modelName = configuration["LM:Model"];
+        var modelUri = configuration["LM:ModelUri"];
+        if (lmKitModelService.Model == null && !string.IsNullOrWhiteSpace(modelName))
+        {
+            logger.LogInformation("Loading {modelName} model..", modelName);
+            var path = Path.Combine(webHostEnvironment.WebRootPath, "models", modelName);
+            if (File.Exists(path))
+                lmKitModelService.LoadModel(path);
+            else if (!string.IsNullOrWhiteSpace(modelUri))
+                lmKitModelService.LoadModel(new Uri(modelUri), path);
+            else
+                throw new ArgumentException("Model name and URI is not set.");
+            logger.LogInformation("Loaded model..");
+        }
+        else
+            throw new ArgumentException("Model name and URI is not set.");
+
+        var embeddingModelName = configuration["LM:EmbeddingModel"];
+        var embeddingModelUri = configuration["LM:EmbeddingModelUri"];
+        if (lmKitModelService.EmbeddingModel == null && !string.IsNullOrWhiteSpace(embeddingModelName))
+        {
+            logger.LogInformation("Loading {modelName} embedding model..", embeddingModelName);
+            var path = Path.Combine(webHostEnvironment.WebRootPath, "models", embeddingModelName);
+            if (File.Exists(path))
+                lmKitModelService.LoadEmbeddingModel(path);
+            else if (!string.IsNullOrWhiteSpace(embeddingModelUri))
+                lmKitModelService.LoadEmbeddingModel(new Uri(embeddingModelUri), path);
+            else
+                throw new ArgumentException("Embedding model name and URI is not set.");
+            logger.LogInformation("Loaded embedding model..");
+        }
+
+        var collectionName = configuration["LM:CollectionName"] ?? "Ebooks";
+
+        if (string.IsNullOrEmpty(lmKitModelService.CollectionName))
+        {
+            lmKitModelService.AddCollectionName(collectionName);
+        }
+
+        if (lmKitModelService.DataSource == null)
+        {
+            lmKitModelService.LoadDataSource(collectionName + ".dat");
+        }
+
+        if (lmKitModelService.RagEngine == null)
+        {
+            lmKitModelService.LoadRagEngine();
+        }
+
+        lmKitModelService.LoadDataSourceIntoRagEngine();
+
+        if (Directory.Exists(Path.Combine(webHostEnvironment.WebRootPath, "ebooks")))
+        {
+            var files = Directory.GetFiles(Path.Combine(webHostEnvironment.WebRootPath, "ebooks"));
+            foreach (var file in files)
+            {
+                lmKitModelService.LoadFilesIntoDataSource(file, Path.GetFileNameWithoutExtension(file));
+            }
+        }
+
+        //lmKitModelService.LoadFilesIntoDataSource(Path.Combine(webHostEnvironment.WebRootPath, "ebooks", "harekrishna.txt"), "harekrishna");
+    }
+
+    #endregion [Load Models]
 
     private ChatHistory LoadChatHistory(string sessionId)
     {

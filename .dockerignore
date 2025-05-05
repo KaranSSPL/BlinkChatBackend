@@ -30,5 +30,6 @@ README.md
 !.git/refs/heads/**
 
 **/wwwroot/models
-**/wwwroot/ebooks
+**/wwwroot/source-files
+**/wwwroot/collections
 **/Ebook.dat

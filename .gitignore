@@ -362,6 +362,7 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
-/Ebooks.dat
 /wwwroot/models
-/wwwroot/ebooks
+/wwwroot/source-files
+/wwwroot/collections
+/Ebooks.dat

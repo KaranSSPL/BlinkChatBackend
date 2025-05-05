@@ -147,32 +147,37 @@ public class LmKitService(ILogger<LmKitService> logger,
             logger.LogInformation("Loaded embedding model..");
         }
 
-        var collectionName = configuration["LM:CollectionName"] ?? "Ebooks";
+        var collectionName = configuration["LM:CollectionName"] ?? "ebook-collection";
 
         if (string.IsNullOrEmpty(lmKitModelService.CollectionName))
         {
             lmKitModelService.AddCollectionName(collectionName);
+            logger.LogInformation("Collection name is set to {collectionName}.", collectionName);
         }
 
         if (lmKitModelService.DataSource == null)
         {
-            lmKitModelService.LoadDataSource(collectionName + ".dat");
+            lmKitModelService.LoadDataSource(Path.Combine(webHostEnvironment.WebRootPath, "collections", collectionName + ".dat"));
+            logger.LogInformation("Data source is loaded.");
         }
 
         if (lmKitModelService.RagEngine == null)
         {
             lmKitModelService.LoadRagEngine();
+            logger.LogInformation("RAG engine is loaded.");
         }
 
         lmKitModelService.LoadDataSourceIntoRagEngine();
+        logger.LogInformation("Data source is loaded into RAG engine.");
 
-        if (Directory.Exists(Path.Combine(webHostEnvironment.WebRootPath, "ebooks")))
+        if (Directory.Exists(Path.Combine(webHostEnvironment.WebRootPath, "source-files")))
         {
-            var files = Directory.GetFiles(Path.Combine(webHostEnvironment.WebRootPath, "ebooks"));
+            var files = Directory.GetFiles(Path.Combine(webHostEnvironment.WebRootPath, "source-files"));
             foreach (var file in files)
             {
                 lmKitModelService.LoadFilesIntoDataSource(file, Path.GetFileNameWithoutExtension(file));
             }
+            logger.LogInformation("Files are loaded into data source.");
         }
 
         //lmKitModelService.LoadFilesIntoDataSource(Path.Combine(webHostEnvironment.WebRootPath, "ebooks", "harekrishna.txt"), "harekrishna");

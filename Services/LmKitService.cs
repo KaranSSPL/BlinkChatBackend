@@ -45,12 +45,25 @@ public class LmKitService(ILogger<LmKitService> logger,
                 await LoadModelsFromConfigurationAsync();
             }
 
-            using var chat = new MultiTurnConversation(lmKitModelService.Model, LoadChatHistory(request.SessionId))
-            {
-                MaximumCompletionTokens = 512,
-                SamplingMode = new GreedyDecoding(),
-                SystemPrompt = "You are a chatbot that only responds to questions that are related to .Net. Simply reply with 'I don't know' when prompt is not related to .Net.",
-            };
+            var chatHistory = LoadChatHistory(request.SessionId);
+
+            using var chat = chatHistory != null ? new MultiTurnConversation(lmKitModelService.Model, chatHistory) : new MultiTurnConversation(lmKitModelService.Model);
+
+            chat.MaximumCompletionTokens = 512;
+            chat.SamplingMode = new GreedyDecoding();
+            chat.SystemPrompt = @"
+You are a helpful assistant with access to conversation records. Your task is to:
+
+1. Use the provided context from conversation records to inform your responses.
+2. Maintain a conversational tone similar to the examples in your knowledge base.
+3. When you find relevant information in the retrieved contexts, use it to create informative responses.
+4. If the retrieved context doesn't contain enough information to answer confidently, acknowledge the limitations.
+5. Always respect the conversational style and format found in your knowledge base.
+6. Cite specific parts of conversations when relevant.
+7. Keep your responses concise and focused on the user's query.
+
+The context from conversation records will be provided with each query. Base your responses primarily on this information rather than your general knowledge.
+";
 
             chat!.AfterTokenSampling += async (sender, token) =>
             {

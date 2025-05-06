@@ -35,9 +35,9 @@ public class AIController(IAIService aIService) : ControllerBase
     }
 
     [HttpPost("chat-rag-response")]
-    public async Task GetRAGResponse(string prompt)
+    public async Task GetRAGResponse(AIPrompt prompt)
     {
-        if (prompt == null || prompt == "")
+        if (prompt == null || prompt.Query == "")
         {
             Response.StatusCode = StatusCodes.Status400BadRequest;
             await Response.WriteAsync("Invalid paramters.");
@@ -47,7 +47,7 @@ public class AIController(IAIService aIService) : ControllerBase
         try
         {
             Response.ContentType = "text/event-stream; charset=utf-8";
-            aIService.GetRAGResponse(prompt, Response.Body);
+            await aIService.GetRAGResponse(prompt, Response.Body);
         }
         catch (Exception ex)
         {

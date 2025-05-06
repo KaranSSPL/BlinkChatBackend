@@ -35,7 +35,7 @@ try
         return new LM(modelUri);
     });
 
-    builder.Services.AddScoped<IAIService, AIService>();
+    builder.Services.AddSingleton<IAIService, AIService>();
 
     builder.Services.AddCors(options =>
     {
